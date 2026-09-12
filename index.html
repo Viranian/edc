@@ -383,7 +383,7 @@ document.getElementById('pClose').onclick=()=>{ const p=document.getElementById(
 /* admin */
 function persist(){ try{ localStorage.setItem(KEY,JSON.stringify(D)); document.getElementById('st').textContent='Saved in this browser'; }catch(e){ document.getElementById('st').textContent='Browser storage off — download the page to keep changes'; } }
 function exportHtml(pub){ const d=JSON.parse(JSON.stringify(D)); if(pub){ d.listings=d.listings.filter(l=>!l.hidden); d.passcode=''; } const json=JSON.stringify(d).replace(/<\/script/g,'<\\/script'); const out=SRC.replace(/(<script id="data" type="application\/json">)[\s\S]*?(<\/script>)/,(m,a,b)=>a+json+b); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([out],{type:'text/html'})); a.download=pub?'knives-public.html':'knives-admin.html'; a.click(); toast(pub?'Public page downloaded — hidden listings removed':'Downloaded with everything'); }
-function enterAdmin(){ if(!D.passcode){toast('This copy has no admin. Open the admin copy.');return;} const p=prompt('Admin passcode'); if(p!==D.passcode){toast('Wrong passcode');return;} admin=true; document.body.classList.add('admin'); render(); }
+function enterAdmin(given){ if(!D.passcode){alert('This copy has no admin. Open knives-admin.html.');return;} const p=given!=null?given:prompt('Admin passcode'); if(p==null) return; if(p.trim().toLowerCase()!==String(D.passcode).trim().toLowerCase()){alert('Wrong passcode. Add #reset to the URL and reload if you think the page state is stale.');return;} admin=true; document.body.classList.add('admin'); try{ render(); toast('Admin on'); }catch(e){ alert('Admin failed to render: '+e.message+'. Add #reset to the URL and reload.'); } }
 let editingHead=false;
 document.getElementById('aEditPage').onclick=function(){ editingHead=!editingHead; ['title','subtitle','intro'].forEach(id=>{ const e=document.getElementById(id); e.contentEditable=editingHead; if(!editingHead) D[id]=e.textContent.trim(); }); this.textContent=editingHead?'Done editing header':'Edit header'; if(!editingHead){persist();render();} else toast('Click the title, subheader or intro to edit'); };
 document.getElementById('aAdd').onclick=()=>{ const id='k'+Date.now(); const l={id,order:D.listings.length,category:tab==='all'?'modern':tab,brand:'',model:'',steel:'',handle:'',lock:'',condition:'Carried, not used',includes:'',rrp:null,newNow:null,price:null,notes:'',hidden:true,sold:false,media:[],cover:'',added:Date.now()}; D.listings.push(l); persist(); render(); openEditor(l); };
@@ -405,8 +405,8 @@ document.getElementById('fClose').onclick=()=>{document.getElementById('aside').
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDetail(); document.getElementById('pClose').click(); closeEditor(); document.getElementById('fClose').click(); } });
 
 render();
-(function(){ const h=location.hash.slice(1); if(h==='admin') enterAdmin(); else if(h){ const l=D.listings.find(x=>x.id===h&&!x.hidden); if(l) openDetail(l); } })();
-window.addEventListener('hashchange',()=>{ if(location.hash==='#admin'&&!admin) enterAdmin(); });
+(function(){ const h=location.hash.slice(1); if(h==='reset'){ try{localStorage.removeItem(KEY);}catch(e){} alert('Saved page state cleared. Reloading.'); location.hash=''; location.reload(); return; } if(h==='admin') enterAdmin(); else if(h.startsWith('admin=')) enterAdmin(decodeURIComponent(h.slice(6))); else if(h){ const l=D.listings.find(x=>x.id===h&&!x.hidden); if(l) openDetail(l); } })();
+window.addEventListener('hashchange',()=>{ const h=location.hash.slice(1); if(h==='reset'){ try{localStorage.removeItem(KEY);}catch(e){} location.hash=''; location.reload(); } else if(h==='admin'&&!admin) enterAdmin(); else if(h.startsWith('admin=')&&!admin) enterAdmin(decodeURIComponent(h.slice(6))); });
 </script>
 </body>
 </html>
